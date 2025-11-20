@@ -24,6 +24,7 @@ export interface SubTopic {
 export interface Scene {
     id: string;
     part: string;
+    title: string;
     type: 'bubble' | 'points';
     bubbleText: string;
     points: string[];
@@ -50,6 +51,7 @@ export default function MaterialGenerator() {
                             {
                                 id: "init-scene-1",
                                 part: "init-scene-1",
+                                title: "Introduction Scene",
                                 type: 'bubble',
                                 bubbleText: "Welcome to the course.",
                                 points: []
@@ -133,6 +135,7 @@ export default function MaterialGenerator() {
                                 return {
                                     id: newSceneId,
                                     part: sc.part || newSceneId, // Use existing part or auto-generate ID
+                                    title: sc.title || "",
                                     type: type,
                                     bubbleText: sc.bubbleText || "",
                                     points: sc.points || []
@@ -159,8 +162,10 @@ export default function MaterialGenerator() {
                 ...tRest,
                 subTopics: subTopics.map(({ id: sId, scenes, ...sRest }) => ({
                     ...sRest,
-                    scenes: scenes.map(({ id: scId, type, bubbleText, points, ...scRest }) => ({
+                    scenes: scenes.map(({ id: scId, type, bubbleText, points, title, ...scRest }) => ({
                         ...scRest,
+                        // Only include title if it's not empty
+                        ...(title ? { title } : {}),
                         // Only include the field relevant to the selected type
                         ...(type === 'bubble' ? { bubbleText } : {}),
                         ...(type === 'points' ? { points } : {})
@@ -249,8 +254,9 @@ export default function MaterialGenerator() {
                                             ...tRest,
                                             subTopics: subTopics.map(({ id: sId, scenes, ...sRest }) => ({
                                                 ...sRest,
-                                                scenes: scenes.map(({ id: scId, type, bubbleText, points, ...scRest }) => ({
+                                                scenes: scenes.map(({ id: scId, type, bubbleText, points, title, ...scRest }) => ({
                                                     ...scRest,
+                                                    ...(title ? { title } : {}),
                                                     ...(type === 'bubble' ? { bubbleText } : {}),
                                                     ...(type === 'points' ? { points } : {})
                                                 }))
@@ -397,7 +403,7 @@ const SubTopicEditor = ({ subTopic, index, totalSubTopics, onChange, onDelete, o
         const newId = generateId();
         onChange({
             ...subTopic,
-            scenes: [...subTopic.scenes, { id: newId, part: newId, type: 'bubble', bubbleText: "", points: [] }]
+            scenes: [...subTopic.scenes, { id: newId, part: newId, title: "", type: 'bubble', bubbleText: "", points: [] }]
         });
     };
 
@@ -538,7 +544,17 @@ const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: 
             </div>
 
             <div className="flex flex-col gap-4 mb-4 mt-4">
-                {/* Removed Scene Part Input - Now uses auto-generated ID displayed above */}
+                {/* Scene Title Input */}
+                <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">Scene Title</label>
+                    <input
+                        type="text"
+                        value={scene.title}
+                        onChange={(e) => onChange({ ...scene, title: e.target.value })}
+                        className="w-full border-slate-300 border rounded px-2 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        placeholder="Enter scene title..."
+                    />
+                </div>
                 
                 {/* Type Selector */}
                 <div>
