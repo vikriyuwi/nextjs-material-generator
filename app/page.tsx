@@ -317,7 +317,7 @@ const TopicEditor = ({ topic, index, totalTopics, onChange, onDelete, onMove }: 
                     {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
                 </button>
                 <div className="flex-1">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Topic Title</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Topic #{index + 1}</label>
                     <input
                         type="text"
                         value={topic.title}
@@ -419,7 +419,7 @@ const SubTopicEditor = ({ subTopic, index, totalSubTopics, onChange, onDelete, o
         <div className="pl-4 border-l-4 border-indigo-200">
             <div className="flex items-start gap-3 mb-4">
                 <div className="flex-1">
-                    <label className="block text-xs font-semibold text-indigo-500 uppercase mb-1">SubTopic Title</label>
+                    <label className="block text-xs font-semibold text-indigo-500 uppercase mb-1">SubTopic #{index + 1}</label>
                     <input
                         type="text"
                         value={subTopic.title}
