@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Plus, Trash2, Save, FileJson, ChevronRight, ChevronDown, X, ArrowUp, ArrowDown, Upload, MessageSquare, List, Hash } from 'lucide-react';
+import { Plus, Trash2, Save, FileJson, ChevronRight, ChevronDown, X, ArrowUp, ArrowDown, Upload, MessageSquare, List, Hash, Image as ImageIcon, Link as LinkIcon } from 'lucide-react';
 
 // --- Interfaces ---
 
@@ -25,9 +25,10 @@ export interface Scene {
     id: string;
     part: string;
     title: string;
-    type: 'bubble' | 'points';
+    type: 'bubble' | 'points' | 'images';
     bubbleText: string;
     points: string[];
+    imageUrls: string[];
 }
 
 // --- Helper to generate IDs ---
@@ -54,7 +55,8 @@ export default function MaterialGenerator() {
                                 title: "Introduction Scene",
                                 type: 'bubble',
                                 bubbleText: "Welcome to the course.",
-                                points: []
+                                points: [],
+                                imageUrls: []
                             }
                         ]
                     }
@@ -125,20 +127,25 @@ export default function MaterialGenerator() {
                             scenes: (s.scenes || []).map((sc: any) => {
                                 // Determine type based on data presence
                                 const hasPoints = Array.isArray(sc.points) && sc.points.length > 0;
+                                const hasImages = Array.isArray(sc.imageUrls) && sc.imageUrls.length > 0;
                                 const hasBubble = !!sc.bubbleText;
-                                // Default to bubble unless only points exist
-                                const type = hasPoints && !hasBubble ? 'points' : 'bubble';
+                                
+                                let type: 'bubble' | 'points' | 'images' = 'bubble';
+                                if (hasPoints) type = 'points';
+                                if (hasImages) type = 'images';
+                                if (sc.type) type = sc.type; // Prefer explicit type if available
                                 
                                 // Generate ID for this scene
                                 const newSceneId = generateId();
 
                                 return {
                                     id: newSceneId,
-                                    part: sc.part || newSceneId, // Use existing part or auto-generate ID
+                                    part: sc.part || newSceneId,
                                     title: sc.title || "",
                                     type: type,
                                     bubbleText: sc.bubbleText || "",
-                                    points: sc.points || []
+                                    points: sc.points || [],
+                                    imageUrls: sc.imageUrls || []
                                 };
                             })
                         }))
@@ -162,13 +169,14 @@ export default function MaterialGenerator() {
                 ...tRest,
                 subTopics: subTopics.map(({ id: sId, scenes, ...sRest }) => ({
                     ...sRest,
-                    scenes: scenes.map(({ id: scId, type, bubbleText, points, title, ...scRest }) => ({
+                    scenes: scenes.map(({ id: scId, type, bubbleText, points, title, imageUrls, ...scRest }) => ({
                         ...scRest,
-                        // Only include title if it's not empty
+                        // Only include optional fields if they are not empty
                         ...(title ? { title } : {}),
                         // Only include the field relevant to the selected type
                         ...(type === 'bubble' ? { bubbleText } : {}),
-                        ...(type === 'points' ? { points } : {})
+                        ...(type === 'points' ? { points } : {}),
+                        ...(type === 'images' ? { imageUrls } : {})
                     }))
                 }))
             }))
@@ -254,11 +262,12 @@ export default function MaterialGenerator() {
                                             ...tRest,
                                             subTopics: subTopics.map(({ id: sId, scenes, ...sRest }) => ({
                                                 ...sRest,
-                                                scenes: scenes.map(({ id: scId, type, bubbleText, points, title, ...scRest }) => ({
+                                                scenes: scenes.map(({ id: scId, type, bubbleText, points, title, imageUrls, ...scRest }) => ({
                                                     ...scRest,
                                                     ...(title ? { title } : {}),
                                                     ...(type === 'bubble' ? { bubbleText } : {}),
-                                                    ...(type === 'points' ? { points } : {})
+                                                    ...(type === 'points' ? { points } : {}),
+                                                    ...(type === 'images' ? { imageUrls } : {})
                                                 }))
                                             }))
                                         }))
@@ -403,7 +412,7 @@ const SubTopicEditor = ({ subTopic, index, totalSubTopics, onChange, onDelete, o
         const newId = generateId();
         onChange({
             ...subTopic,
-            scenes: [...subTopic.scenes, { id: newId, part: newId, title: "", type: 'bubble', bubbleText: "", points: [] }]
+            scenes: [...subTopic.scenes, { id: newId, part: newId, title: "", type: 'bubble', bubbleText: "", points: [], imageUrls: [] }]
         });
     };
 
@@ -492,6 +501,7 @@ interface SceneEditorProps {
 
 const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: SceneEditorProps) => {
     
+    // --- Point Handlers ---
     const addPoint = () => {
         onChange({ ...scene, points: [...scene.points, ""] });
     };
@@ -507,6 +517,22 @@ const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: 
         onChange({ ...scene, points: newPoints });
     };
 
+    // --- Image URL Handlers ---
+    const addImageUrl = () => {
+        onChange({ ...scene, imageUrls: [...scene.imageUrls, ""] });
+    };
+
+    const updateImageUrl = (index: number, val: string) => {
+        const newUrls = [...scene.imageUrls];
+        newUrls[index] = val;
+        onChange({ ...scene, imageUrls: newUrls });
+    };
+
+    const removeImageUrl = (index: number) => {
+        const newUrls = scene.imageUrls.filter((_, i) => i !== index);
+        onChange({ ...scene, imageUrls: newUrls });
+    };
+
     return (
         <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group">
             {/* Scene ID Display */}
@@ -516,7 +542,7 @@ const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: 
             </div>
 
             {/* Scene Controls (Delete & Move) */}
-            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white shadow-sm rounded-md border border-slate-100 p-0.5">
+            <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition bg-white shadow-sm rounded-md border border-slate-100 p-0.5 z-10">
                 <button 
                     onClick={() => onMove('up')} 
                     disabled={index === 0}
@@ -543,7 +569,7 @@ const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: 
                 </button>
             </div>
 
-            <div className="flex flex-col gap-4 mb-4 mt-4">
+            <div className="flex flex-col gap-4 mt-4">
                 {/* Scene Title Input */}
                 <div>
                     <label className="block text-xs font-medium text-slate-500 mb-1">Scene Title</label>
@@ -582,59 +608,126 @@ const SceneEditor = ({ scene, index, totalScenes, onChange, onDelete, onMove }: 
                             <List size={16} />
                             Points
                         </button>
+                        <button
+                            onClick={() => onChange({ ...scene, type: 'images' })}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md border text-sm transition ${
+                                scene.type === 'images' 
+                                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700 font-medium' 
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                            }`}
+                        >
+                            <ImageIcon size={16} />
+                            Images
+                        </button>
                     </div>
                 </div>
 
                 {/* Conditional Input Rendering */}
-                {scene.type === 'bubble' ? (
-                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                        <label className="block text-xs font-medium text-slate-500 mb-1">Bubble Text</label>
-                        <textarea
-                            value={scene.bubbleText}
-                            onChange={(e) => onChange({ ...scene, bubbleText: e.target.value })}
-                            className="w-full border-slate-300 border rounded px-2 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500 min-h-[80px] resize-y"
-                            placeholder="Enter dialogue..."
-                            rows={3}
-                        />
-                    </div>
-                ) : (
-                    <div className="animate-in fade-in slide-in-from-top-2 duration-200">
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="block text-xs font-medium text-slate-500">Points List</label>
-                            <button 
-                                onClick={addPoint}
-                                className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded flex items-center gap-1 transition"
-                            >
-                                <Plus size={10} /> Add Point
-                            </button>
+                <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+                    {scene.type === 'bubble' && (
+                        <div>
+                            <label className="block text-xs font-medium text-slate-500 mb-1">Bubble Text</label>
+                            <textarea
+                                value={scene.bubbleText}
+                                onChange={(e) => onChange({ ...scene, bubbleText: e.target.value })}
+                                className="w-full border-slate-300 border rounded px-2 py-1.5 text-sm focus:ring-indigo-500 focus:border-indigo-500 min-h-[80px] resize-y"
+                                placeholder="Enter dialogue..."
+                                rows={3}
+                            />
                         </div>
-                        <div className="space-y-2">
-                            {scene.points.map((point, idx) => (
-                                <div key={idx} className="flex items-center gap-2">
-                                    <span className="text-xs text-slate-400 select-none">•</span>
-                                    <input
-                                        type="text"
-                                        value={point}
-                                        onChange={(e) => updatePoint(idx, e.target.value)}
-                                        className="flex-1 border-b border-slate-200 focus:border-indigo-500 bg-transparent text-sm px-1 py-0.5 focus:outline-none transition"
-                                        placeholder="Enter point..."
-                                    />
-                                    <button onClick={() => removePoint(idx)} className="text-slate-300 hover:text-red-400">
-                                        <X size={12} />
-                                    </button>
-                                </div>
-                            ))}
-                            {scene.points.length === 0 && (
-                                <div className="text-center py-4 bg-slate-50 rounded border border-dashed border-slate-200">
-                                    <p className="text-xs text-slate-400">No points added yet.</p>
-                                    <button onClick={addPoint} className="text-xs text-indigo-500 hover:text-indigo-700 mt-1 font-medium">
-                                        + Add first point
-                                    </button>
-                                </div>
-                            )}
+                    )}
+
+                    {scene.type === 'points' && (
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-medium text-slate-500">Points List</label>
+                                <button 
+                                    onClick={addPoint}
+                                    className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded flex items-center gap-1 transition"
+                                >
+                                    <Plus size={10} /> Add Point
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {scene.points.map((point, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                        <span className="text-xs text-slate-400 select-none">•</span>
+                                        <input
+                                            type="text"
+                                            value={point}
+                                            onChange={(e) => updatePoint(idx, e.target.value)}
+                                            className="flex-1 border-b border-slate-200 focus:border-indigo-500 bg-transparent text-sm px-1 py-0.5 focus:outline-none transition"
+                                            placeholder="Enter point..."
+                                        />
+                                        <button onClick={() => removePoint(idx)} className="text-slate-300 hover:text-red-400">
+                                            <X size={12} />
+                                        </button>
+                                    </div>
+                                ))}
+                                {scene.points.length === 0 && (
+                                    <div className="text-center py-4 bg-slate-50 rounded border border-dashed border-slate-200">
+                                        <p className="text-xs text-slate-400">No points added yet.</p>
+                                        <button onClick={addPoint} className="text-xs text-indigo-500 hover:text-indigo-700 mt-1 font-medium">
+                                            + Add first point
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+
+                    {scene.type === 'images' && (
+                        <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <label className="block text-xs font-medium text-slate-500">Image URLs</label>
+                                <button 
+                                    onClick={addImageUrl}
+                                    className="text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 px-2 py-0.5 rounded flex items-center gap-1 transition"
+                                >
+                                    <Plus size={10} /> Add URL
+                                </button>
+                            </div>
+                            <div className="space-y-2">
+                                {scene.imageUrls.map((url, idx) => (
+                                    <div key={idx} className="space-y-1">
+                                        <div className="flex items-center gap-2">
+                                            <LinkIcon size={12} className="text-slate-400" />
+                                            <input
+                                                type="text"
+                                                value={url}
+                                                onChange={(e) => updateImageUrl(idx, e.target.value)}
+                                                className="flex-1 border-b border-slate-200 focus:border-indigo-500 bg-transparent text-sm px-1 py-0.5 focus:outline-none transition"
+                                                placeholder="https://example.com/image.png"
+                                            />
+                                            <button onClick={() => removeImageUrl(idx)} className="text-slate-300 hover:text-red-400">
+                                                <X size={12} />
+                                            </button>
+                                        </div>
+                                        {/* Optional Preview if URL exists */}
+                                        {url && (
+                                            <div className="ml-5">
+                                                <img 
+                                                    src={url} 
+                                                    alt="Preview" 
+                                                    className="h-12 w-auto rounded border border-slate-200 object-cover opacity-70 hover:opacity-100 transition"
+                                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {scene.imageUrls.length === 0 && (
+                                    <div className="text-center py-4 bg-slate-50 rounded border border-dashed border-slate-200">
+                                        <p className="text-xs text-slate-400">No images added yet.</p>
+                                        <button onClick={addImageUrl} className="text-xs text-indigo-500 hover:text-indigo-700 mt-1 font-medium">
+                                            + Add first image URL
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
